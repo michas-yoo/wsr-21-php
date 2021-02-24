@@ -10,31 +10,33 @@ include "db.php";
 
 if (empty($user)) {
   echo "<script>
-    alert('У вас недостаточно прав для просмотра этой страницы!');
+    alert(`У вас недостаточно прав для просмотра этой страницы!`);
     location.href = 'index.php';
   </script>";
 }
 
 if ($_POST) {
-  $title = htmlspecialchars($_POST['name']);
+  $title = htmlspecialchars($_POST['title']);
   $subtitle = htmlspecialchars($_POST['subtitle']);
   $resume = htmlspecialchars($_POST['anons']);
   $text = htmlspecialchars($_POST['content']);
+
   $img = $_FILES['file'];
+  $name = 'images/' . md5(time()) . '.' . explode("/", $img['type'])[1];
 
-  $name = md5(rand()) . '.' . explode('/', $img['type'])[1];
-  move_uploaded_file($img['tmp_name'], 'images/' . $name);
+  move_uploaded_file($img['tmp_name'], $name);
 
-  if ($query = $db->query("INSERT INTO posts SET title='$title',
-                      subtitle='$subtitle', resume='$resume', text='$text',
-                      created_at=CURDATE(), img='images/$name', author_id=$user[id]")) {
+  if ($query = $db->query("INSERT INTO posts SET title='$title', subtitle='$subtitle',
+                          resume='$resume', text='$text', created_at=CURDATE(),
+                          img='$name', author_id=$user[id]")) {
     $id = $db->lastInsertId();
-    $post_id = $db->query("select count(*) from posts")->fetchAll()[0][0];
+
     $db->query("INSERT INTO likes SET post_id=$id, amount=0");
 
     echo "<script>alert('Успешно добавлено!')</script>";
-  } else {
-    echo "<script>alert(`".$db->errorInfo()[2]."`)</script>";
+  }
+  else {
+    echo "<script>alert(`" . $db->errorInfo()[2] . "`)</script>";
   }
 }
 
@@ -95,7 +97,7 @@ if ($_POST) {
     <article class="post">
       <h1>Add Post</h1>
       <form action="" method="post" enctype="multipart/form-data">
-        <input required type="text" name="name" placeholder="Post name"><br>
+        <input required type="text" name="title" placeholder="Post name"><br>
         <input required type="text" name="subtitle" placeholder="Subtitle"><br>
         <input required type="text" name="anons" placeholder="Anons"><br>
         <textarea required name="content" placeholder="Post content"></textarea><br>

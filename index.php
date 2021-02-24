@@ -19,20 +19,25 @@ if ($_GET) {
       setcookie('likes', serialize($cookie));
     }
 
-    echo "<script>location.href='index.php'</script>";
+    echo "<script>location.href = 'index.php'; </script>";
+    die();
   }
 }
 
 if ($_POST) {
   $login = $_POST['name'] ?? "";
-  $pass = $_POST['password'] ?? "";
+  $password = $_POST['password'] ?? "";
 
   if (isset($_POST['login'])) {
-    if ($query = $db->query("SELECT * FROM users WHERE login='$login' and password='$pass'")) {
+    if ($query = $db->query("SELECT * FROM users WHERE login='$login' and password='$password'")) {
       $user = $query->fetchAll(PDO::FETCH_ASSOC);
 
-      $_SESSION['user'] = $user;
-      echo "<script>location.href='index.php'</script>";
+      if (count($user) > 0) {
+        $_SESSION['user'] = $user;
+        echo "<script>alert('Добро пожаловать!'); location.href = 'index.php';</script>";
+      } else {
+        echo "<script>alert('Неверный логин или пароль!')</script>";
+      }
     } else {
       echo $db->errorInfo()[2];
     }
@@ -40,31 +45,25 @@ if ($_POST) {
     $user = [];
     $_SESSION['user'] = [];
   } else {
-    if ($query = $db->query("INSERT INTO users SET login='$login', password='$pass'")) {
-      echo "<script>alert('Вы успешно зарегистрировались! Пожалуйста, авторизуйтесь')</script>";
+    if ($query = $db->query("INSERT INTO users SET login='$login', password='$password'")) {
+      echo "<script>alert('Вы успешно зарегистрировались! Пожалуйста авторизуйтесь');</script>";
     }
   }
 }
 
-$settings = [
-  "pages" => 3,
-  "logo" => "images/logo.jpg"
-];
-
 $settings = [];
-$current_page = $_GET['page'] ?? 1;
-
 if ($settings_query = $db->query("SELECT * FROM settings")) {
   $settings = $settings_query->fetchAll(PDO::FETCH_ASSOC)[0];
 }
 
+$current_page = $_GET['page'] ?? 1;
+$offset = ($current_page - 1) * intval($settings['posts']);
+
 $posts = [];
-$offset = ($current_page - 1) * intval($settings["pages"]);
-if ($posts_query = $db->query("SELECT * FROM posts ORDER BY id DESC LIMIT $settings[pages] OFFSET $offset")) {
+if ($posts_query = $db->query("SELECT * FROM posts ORDER BY id DESC LIMIT $settings[posts] OFFSET $offset")) {
   $posts = $posts_query->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
-
 <html>
 <head>
   <title>Future Imperfect by HTML5 UP</title>
@@ -89,14 +88,16 @@ if ($posts_query = $db->query("SELECT * FROM posts ORDER BY id DESC LIMIT $setti
 
     <?php if (!empty($user)): ?>
       <a href="add.php">
-        <button class="button big">Добавить пост</button>
+        <button class="button big">Добавить пост!</button>
       </a>
     <?php endif; ?>
 
     <?php if (!empty($user) && $user['role'] == 1): ?>
       <a href="admin.php">
-        <button class="button big">Панель администрирования</button></a>
+        <button class="button big">Панель администрирования</button>
+      </a>
     <?php endif; ?>
+
     <nav class="main">
       <ul>
         <li class="menu">
@@ -113,30 +114,35 @@ if ($posts_query = $db->query("SELECT * FROM posts ORDER BY id DESC LIMIT $setti
     <section>
       <ul class="actions vertical">
         <?php if (empty($user)): ?>
+
           <li><h3>Login</h3></li>
           <li>
-            <form action="?" method="post">
-              <input type="text" name="name" placeholder="Username"><br>
-              <input type="password" name="password" placeholder="Password"><br>
+            <form action="" method="post">
+              <input required type="text" name="name" placeholder="Username"><br>
+              <input required type="password" name="password" placeholder="Password"><br>
               <input type="submit" name="login" class="button big fit" value="Log In">
             </form>
           </li>
-
           <li><h3>Registration</h3></li>
           <li>
-            <form action="?" method="post">
+            <form action="" method="post">
               <input required type="text" name="name" placeholder="Username"><br>
               <input required type="password" name="password" placeholder="Password"><br>
+              <input type="file" name="file"><br><br>
               <input type="submit" name="register" class="button big fit" value="Sign up">
             </form>
           </li>
+
         <?php else: ?>
+
           <li>
             <form action="" method="post">
-              <input type="submit" name="logout" value="Выйти" class="button big fit">
+              <input type="submit" value="Выйти" class="button big fit" name="logout">
             </form>
           </li>
+
         <?php endif; ?>
+
       </ul>
     </section>
 
@@ -147,41 +153,45 @@ if ($posts_query = $db->query("SELECT * FROM posts ORDER BY id DESC LIMIT $setti
 
     <!-- Post -->
     <?php foreach ($posts as $post): ?>
+
       <?php
+      $id = $post['id'];
+      $a_id = $post['author_id'];
 
-      $id = $post['author_id'];
-      $post['author_name'] = $db->query("SELECT login FROM users WHERE id=$id")->fetchAll()[0][0];
+      $author_name = $db->query("SELECT login FROM users WHERE id=$a_id")->fetchAll()[0][0];
 
-      $comments_count = $db->query("SELECT count(*) FROM comments WHERE post_id=$post[id]")->fetchAll()[0][0];
-      $likes_amount = $db->query("SELECT amount FROM likes WHERE post_id=$post[id]")->fetchAll()[0][0];
+      $comments_count = $db->query("SELECT count(*) FROM comments WHERE post_id=$id")->fetchAll()[0][0];
+      $likes_count = $db->query("SELECT amount FROM likes WHERE post_id=$id")->fetchAll()[0][0];
       ?>
       <article class="post">
         <header>
           <div class="title">
-            <h2><a href="single.php?post=<?= $post['id']; ?>"><?= $post['title'] ?></a></h2>
+            <h2><a href="single.php?post=<?= $id; ?>"><?php echo $post['title'] ?></a></h2>
             <p><?= $post['subtitle'] ?></p>
           </div>
           <div class="meta">
             <time class="published" datetime="<?= $post['created_at'] ?>"><?= $post['created_at'] ?></time>
-            <a href="#" class="author"><span class="name"><?= $post['author_name'] ?></span><img src="images/avatar.jpg"
-                                                                                                 alt=""/></a>
+            <a href="user.php?id=<?= $post['author_id']; ?>" class="author"><span class="name"><?= $author_name ?></span><img src="images/avatar.jpg"
+                                                                                                                              alt=""/></a>
           </div>
         </header>
-        <a href="single.php?post=<?= $post['id']; ?>" class="image featured"><img src="<?= $post["img"] ?>" alt=""/></a>
+        <a href="single.php?post=<?= $id; ?>" class="image featured"><img src="<?= $post['img'] ?>" alt=""/></a>
         <p><?= $post['resume'] ?></p>
         <footer>
           <ul class="actions">
-            <li><a href="single.php?post=<?= $post['id'] ?>" class="button big">Continue Reading</a></li>
+            <li><a href="single.php?post=<?= $id; ?>" class="button big">Continue Reading</a></li>
           </ul>
           <ul class="stats">
-            <li><a href="?like=<?= $post['id'] ?>"
-                   class="<?php if (isset(unserialize($_COOKIE['likes'])[$post['id']])) echo "liked " ?>icon fa-heart"><?= $likes_amount ?></a>
-            </li>
+            <li><a href="?like=<?= $id; ?>" class="icon fa-heart<?php
+              if (isset(unserialize($_COOKIE['likes'])[$id]))
+                echo " liked"; ?>"><?= $likes_count ?></a></li>
+
             <li><a href="#" class="icon fa-comment"><?= $comments_count ?></a></li>
           </ul>
         </footer>
       </article>
     <?php endforeach; ?>
+
     <!-- Pagination -->
     <ul class="actions pagination">
       <li><a href="?page=<?= $current_page - 1 ?>"
@@ -196,7 +206,7 @@ if ($posts_query = $db->query("SELECT * FROM posts ORDER BY id DESC LIMIT $setti
 
     <!-- Intro -->
     <section id="intro">
-      <a href="#" class="logo"><img src="<?= $settings['logo'] ?>" alt=""/></a>
+      <a href="#" class="logo"><img src="<?= $settings['logo']; ?>" alt=""/></a>
       <header>
         <h2>Blog</h2>
         <p>Be popular with us</p>
@@ -217,6 +227,7 @@ if ($posts_query = $db->query("SELECT * FROM posts ORDER BY id DESC LIMIT $setti
           </header>
           <a href="#" class="image"><img src="images/pic04.jpg" alt=""/></a>
         </article>
+
       </div>
     </section>
 
@@ -226,28 +237,32 @@ if ($posts_query = $db->query("SELECT * FROM posts ORDER BY id DESC LIMIT $setti
       <h3>Rating bloggers</h3>
 
       <ul class="posts">
+
         <?php
         $bloggers = $db->query("SELECT id, login FROM users");
 
-        foreach ($bloggers as $blog) {
-          $user_posts = $db->query("SELECT * FROM posts Where author_id=$blog[id]")->fetchAll();
+        foreach ($bloggers as $blogger) {
+          $blogger_posts = $db->query("SELECT * FROM posts WHERE author_id=$blogger[id]")->fetchAll(PDO::FETCH_ASSOC);
 
-          $posts_count = count($user_posts);
+          $posts_count = count($blogger_posts);
           $likes = 0;
-          foreach($user_posts as $p) {
-            $likes += intval($db->query("Select amount from likes where post_id = $p[id]")->fetchAll()[0][0]);
+
+          foreach ($blogger_posts as $bp) {
+            $likes += intval($db->query("SELECT amount FROM likes WHERE post_id=$bp[id]")->fetchAll()[0][0]);
           }
+
           ?>
-            <li>
+          <li>
             <article>
-            <header>
-            <h3><a href="#"><?= $blog['login'] ?></a></h3>
-          <span class="published"><?= $likes ?> likes in <?= $posts_count ;?> posts</span>
-          </header>
-          <a href="#" class="image"><img src="images/pic08.jpg" alt=""/></a>
-          </article>
+              <header>
+                <h3><a href="user.php?id=<?= $blogger['id'] ?>"><?= $blogger['login'] ?></a></h3>
+                <span class="published"><?= $likes ?> likes in <?= $posts_count ?> posts</span>
+              </header>
+              <a href="#" class="image"><img src="images/pic08.jpg" alt=""/></a>
+            </article>
           </li>
         <?php } ?>
+
       </ul>
     </section>
 

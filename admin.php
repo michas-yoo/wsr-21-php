@@ -2,44 +2,43 @@
 
 include "db.php";
 
-if (empty($user) || $user['role'] != 1) {
+if (empty($user) || $user['role'] != 1 ) {
   echo "<script>
-    alert('У вас недостаточно прав для просмотра этой страницы!');
+    alert(`У вас недостаточно прав для просмотра этой страницы!`);
     location.href = 'index.php';
   </script>";
 }
 
 if ($_POST) {
+  $res = "";
+
   if (isset($_POST['logo'])) {
     $img = $_FILES['file'];
+    $name = 'images/' . md5(time()) . '.' . explode("/", $img['type'])[1];
+    move_uploaded_file($img['tmp_name'], $name);
 
-    $name = md5(rand()) . '.' . explode('/', $img['type'])[1];
-    move_uploaded_file($img['tmp_name'], 'images/' . $name);
-
-    $res = "";
-    if ($db->query("UPDATE settings SET logo='images/$name' Where id=1")) {
+    if ($query = $db->query("UPDATE settings SET logo='$name' WHERE id=1")) {
       $res = "Успешно обновлено!";
     } else {
       $res = $db->errorInfo()[2];
     }
-
-    echo "<script>alert(`$res`)</script>";
   }
   else {
-    $val = $_POST['amount'];
-    $res = "";
+    $val = $_POST['posts'];
 
-    if ($db->query("UPDATE settings SET pages=$val where id=1")) {
-      $res = "Успешно изменено!";
+    if ($query = $db->query("UPDATE settings SET posts='$val' WHERE id=1")) {
+      $res = "Успешно обновлено!";
     } else {
       $res = $db->errorInfo()[2];
     }
-
-    echo "<script>alert(`$res`)</script>";
   }
+
+  echo "<script>alert(`$res`)</script>";
 }
 
+
 ?>
+
 
 <html>
 <head>
@@ -97,16 +96,16 @@ if ($_POST) {
     <article class="post">
       <h1>Обновить логотип</h1>
       <form action="" method="post" enctype="multipart/form-data">
-        <input type="file" accept="image/*" name="file"><br><br>
-        <button name="logo" class="button big">Обновить!</button>
+        <input required type="file" accept="image/*" name="file"><br><br>
+        <input type="submit" name="logo" class="button big" value="Обновить лого">
       </form>
     </article>
-    <!-- Post -->
+
     <article class="post">
       <h1>Изменить пагинацию</h1>
       <form action="" method="post">
-        <input type="number" name="amount"><br><br>
-        <button name="page" class="button big">Обновить!</button>
+        <input required type="number" name="posts"><br><br>
+        <input type="submit" name="page" class="button big" value="Обновить">
       </form>
     </article>
 
@@ -129,3 +128,4 @@ if ($_POST) {
 
 </body>
 </html>
+
