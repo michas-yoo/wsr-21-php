@@ -32,6 +32,7 @@ if ($_POST) {
       $user = $query->fetchAll(PDO::FETCH_ASSOC);
 
       $_SESSION['user'] = $user;
+      echo "<script>location.href='index.php'</script>";
     } else {
       echo $db->errorInfo()[2];
     }

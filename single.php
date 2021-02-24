@@ -20,7 +20,7 @@ if (isset($_GET['delete'])) {
     $db->query("DELETE FROM comments WHERE post_id=$id");
     $db->query("DELETE FROM likes WHERE post_id=$id");
 
-    echo "<script>alert('Успешно удалено!');  </script>";
+    echo "<script>alert('Успешно удалено!'); location.href='index.php' </script>";
   }
 }
 
